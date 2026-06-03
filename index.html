@@ -522,48 +522,12 @@
     <div class="divider fade-in"></div>
 
     <!-- music player -->
-    <section class="player-section fade-in">
-      <p class="section-label">Now Playing</p>
-      <div class="player-card">
-        <div class="track-info">
-          <div class="track-icon" id="trackIcon"></div>
-          <div class="track-meta">
-            <div class="track-title">心よ、走れ (Live Ver.)</div>
-            <div class="track-artist">ASH · CLIMB with Mizui</div>
-          </div>
-        </div>
-
-        <div class="progress-wrap" id="progressWrap">
-          <div class="progress-bar" id="progressBar"></div>
-        </div>
-
-        <div class="controls">
-          <button class="ctrl-btn" id="rewindBtn" title="10秒戻る">⏮</button>
-          <button class="play-btn" id="playBtn">▶</button>
-          <button class="ctrl-btn" id="fwdBtn" title="10秒進む">⏭</button>
-          <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
-        </div>
-
-        <div class="volume-wrap">
-          <span class="vol-icon">🔈</span>
-          <input type="range" id="volSlider" min="0" max="1" step="0.02" value="0.8">
-        </div>
-      </div>
-    </section>
 
     <!-- links -->
     <section class="links-section fade-in">
       <p class="section-label">Listen & Create</p>
       <div class="link-grid">
 
-        <a href="https://www.soundon.global/bio/climb" target="_blank" rel="noopener" class="link-card wide">
-          <span class="link-card-icon">🎵</span>
-          <div class="link-meta">
-            <div class="link-card-label">Music</div>
-            <div class="link-card-title">SoundOn — 全曲聴く</div>
-          </div>
-          <span class="link-arrow">→</span>
-        </a>
 
         <a href="https://huggingface.co/spaces/climbwithmizui/mizui-video-creator" target="_blank" rel="noopener" class="link-card wide">
           <span class="link-card-icon">🎬</span>
@@ -590,16 +554,22 @@
     <source src="./kokoro_hashire.mp3" type="audio/mpeg">
   </audio>
 
+
+</body>
+</html>
   <script>
-    const audio   = document.getElementById('audioEl');
+    const audio = document.getElementById('audioEl');
     const playBtn = document.getElementById('playBtn');
-    const progWrap= document.getElementById('progressWrap');
+    const progWrap = document.getElementById('progressWrap');
     const progBar = document.getElementById('progressBar');
-    const timeEl  = document.getElementById('timeDisplay');
-    const volSlider= document.getElementById('volSlider');
-    const trackIcon= document.getElementById('trackIcon');
-    const rewindBtn= document.getElementById('rewindBtn');
-    const fwdBtn  = document.getElementById('fwdBtn');
+    const timeEl = document.getElementById('timeDisplay');
+    const trackIcon = document.getElementById('trackIcon');
+    const unlockSection = document.getElementById('unlockSection');
+    const fullPlayer = document.getElementById('fullPlayer');
+    const trackBadge = document.getElementById('trackBadge');
+
+    const PREVIEW_SEC = 10;
+    let isUnlocked = false;
 
     function fmt(s) {
       const m = Math.floor(s / 60);
@@ -608,6 +578,43 @@
     }
 
     audio.volume = 0.8;
+
+    // URLパラメータにtokenがあれば決済済み→フルアクセス
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const track = params.get('track');
+
+    if (token && track) {
+      verifyAndUnlock(token, track);
+    }
+
+    async function verifyAndUnlock(sessionId, trackId) {
+      try {
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, trackId })
+        });
+        const data = await res.json();
+        if (data.audioUrl) {
+          unlockAudio(data.audioUrl);
+        }
+      } catch(e) {
+        console.error(e);
+      }
+    }
+
+    function unlockAudio(url) {
+      isUnlocked = true;
+      audio.src = url;
+      unlockSection.style.display = 'none';
+      fullPlayer.style.display = 'block';
+      trackBadge.textContent = '✦ FULL';
+      trackBadge.style.color = 'var(--jade)';
+      timeEl.textContent = '0:00 / --:--';
+      // URLをクリーン
+      window.history.replaceState({}, '', '/');
+    }
 
     playBtn.addEventListener('click', () => {
       if (audio.paused) {
@@ -622,10 +629,26 @@
     });
 
     audio.addEventListener('timeupdate', () => {
-      if (!audio.duration) return;
-      const pct = (audio.currentTime / audio.duration) * 100;
-      progBar.style.width = pct + '%';
-      timeEl.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+      if (!isUnlocked) {
+        // プレビュー10秒制限
+        if (audio.currentTime >= PREVIEW_SEC) {
+          audio.pause();
+          audio.currentTime = 0;
+          playBtn.textContent = '▶';
+          trackIcon.classList.remove('playing');
+          timeEl.textContent = `0:00 / 0:10`;
+          progBar.style.width = '0%';
+          return;
+        }
+        const pct = (audio.currentTime / PREVIEW_SEC) * 100;
+        progBar.style.width = pct + '%';
+        timeEl.textContent = `${fmt(audio.currentTime)} / 0:10`;
+      } else {
+        if (!audio.duration) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        progBar.style.width = pct + '%';
+        timeEl.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+      }
     });
 
     audio.addEventListener('ended', () => {
@@ -634,24 +657,35 @@
       progBar.style.width = '0%';
     });
 
-    progWrap.addEventListener('click', (e) => {
-      const rect = progWrap.getBoundingClientRect();
-      const ratio = (e.clientX - rect.left) / rect.width;
-      audio.currentTime = ratio * audio.duration;
+    document.getElementById('volSlider') && document.getElementById('volSlider').addEventListener('input', (e) => {
+      audio.volume = e.target.value;
     });
 
-    volSlider.addEventListener('input', () => {
-      audio.volume = volSlider.value;
-    });
-
-    rewindBtn.addEventListener('click', () => {
-      audio.currentTime = Math.max(0, audio.currentTime - 10);
-    });
-
-    fwdBtn.addEventListener('click', () => {
-      audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
-    });
+    async function startCheckout() {
+      const btn = document.getElementById('unlockBtn');
+      btn.textContent = '...';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            trackId: 'kokoro_hashire',
+            trackTitle: '心よ、走れ (Live Ver.)'
+          })
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          btn.textContent = '🔓 Listen Full · $1';
+          btn.disabled = false;
+        }
+      } catch(e) {
+        btn.textContent = '🔓 Listen Full · $1';
+        btn.disabled = false;
+      }
+    }
   </script>
-
 </body>
 </html>
