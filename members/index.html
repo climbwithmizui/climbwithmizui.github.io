@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLIMB Members — ASH</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Shippori+Mincho:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080e14;
+      --jade: #4ecdc4;
+      --jade-dim: #2a7d78;
+      --jade-glow: rgba(78,205,196,0.18);
+      --text: #fdfaf6;
+      --text-dim: rgba(253,250,246,0.45);
+      --text-faint: rgba(253,250,246,0.18);
+      --border: rgba(78,205,196,0.15);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+    }
+    .wrapper {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+    .eyebrow {
+      font-size: 0.58rem;
+      letter-spacing: 0.55em;
+      color: var(--jade);
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+    h1 {
+      font-family: 'Shippori Mincho', serif;
+      font-size: 2rem;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+    .subtitle {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      margin-bottom: 2rem;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--jade-dim), transparent);
+      margin: 2rem 0;
+      opacity: 0.4;
+    }
+    .section-label {
+      font-size: 0.52rem;
+      letter-spacing: 0.6em;
+      color: var(--jade);
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 1rem;
+    }
+    /* track list */
+    .track-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .track-item {
+      background: rgba(13,21,32,0.8);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .track-item:hover { border-color: rgba(78,205,196,0.4); }
+    .track-item.playing { border-color: var(--jade); background: rgba(78,205,196,0.06); }
+    .track-play {
+      width: 32px; height: 32px;
+      border: 1px solid var(--jade-dim);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--jade);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .track-item.playing .track-play {
+      background: var(--jade-glow);
+      border-color: var(--jade);
+    }
+    .track-meta { flex: 1; }
+    .track-title { font-size: 0.78rem; color: var(--text); }
+    .track-artist { font-size: 0.6rem; color: var(--text-dim); margin-top: 0.2rem; }
+    /* player bar */
+    .player-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(8,14,20,0.95);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      padding: 0.8rem 1.5rem;
+      display: none;
+    }
+    .player-bar.active { display: block; }
+    .player-bar-inner {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .bar-info { flex: 1; min-width: 0; }
+    .bar-title { font-size: 0.72rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-artist { font-size: 0.58rem; color: var(--text-dim); }
+    .bar-play {
+      width: 36px; height: 36px;
+      border: 1px solid var(--jade);
+      border-radius: 50%;
+      background: none;
+      color: var(--jade);
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .bar-play:hover { background: var(--jade-glow); }
+    .progress-wrap {
+      position: relative;
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--jade-dim), var(--jade));
+      border-radius: 2px;
+      width: 0%;
+    }
+    .bar-time { font-size: 0.58rem; color: var(--text-faint); white-space: nowrap; }
+    /* tools */
+    .tool-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+    .tool-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.2rem;
+      background: rgba(13,21,32,0.8);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .tool-card:hover { border-color: rgba(78,205,196,0.4); transform: translateY(-1px); }
+    .tool-icon { font-size: 1.2rem; }
+    .tool-meta { flex: 1; }
+    .tool-label { font-size: 0.55rem; letter-spacing: 0.3em; color: var(--jade); text-transform: uppercase; margin-bottom: 0.2rem; }
+    .tool-title { font-size: 0.78rem; }
+    .tool-arrow { color: var(--jade-dim); transition: transform 0.2s; }
+    .tool-card:hover .tool-arrow { transform: translateX(4px); color: var(--jade); }
+    /* gate */
+    .gate {
+      text-align: center;
+      padding: 3rem 1rem;
+    }
+    .gate-title { font-family: 'Shippori Mincho', serif; font-size: 1.5rem; color: var(--jade); margin-bottom: 1rem; }
+    .gate-text { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 2rem; line-height: 1.8; }
+    .gate-btn {
+      display: inline-block;
+      padding: 0.8rem 2rem;
+      background: linear-gradient(135deg, var(--jade-dim), var(--jade));
+      color: #080e14;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-radius: 3px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .gate-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(78,205,196,0.3); }
+    .content { display: none; }
+    .content.unlocked { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  <p class="eyebrow">CLIMB with Mizui</p>
+  <h1>Members</h1>
+  <p class="subtitle">✦ Full access · All tracks · All tools</p>
+
+  <!-- gate（未認証） -->
+  <div class="gate" id="gate">
+    <p class="gate-title">Members Only</p>
+    <p class="gate-text">このページは月額メンバー限定です。<br>$1/月で全曲・全ツールが使い放題。</p>
+    <a href="/" class="gate-btn">← Back to CLIMB</a>
+  </div>
+
+  <!-- content（認証済み） -->
+  <div class="content" id="content">
+
+    <div class="divider"></div>
+
+    <!-- tracks -->
+    <section>
+      <p class="section-label">All Tracks</p>
+      <div class="track-list" id="trackList"></div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- tools -->
+    <section>
+      <p class="section-label">Tools</p>
+      <div class="tool-grid">
+        <a href="https://huggingface.co/spaces/climbwithmizui/mizui-video-creator" target="_blank" class="tool-card">
+          <span class="tool-icon">🎬</span>
+          <div class="tool-meta">
+            <div class="tool-label">Video</div>
+            <div class="tool-title">Mizui Video Creator</div>
+          </div>
+          <span class="tool-arrow">→</span>
+        </a>
+        <a href="https://huggingface.co/spaces/climbwithmizui/mizui-sound" target="_blank" class="tool-card">
+          <span class="tool-icon">🎵</span>
+          <div class="tool-meta">
+            <div class="tool-label">Sound</div>
+            <div class="tool-title">Mizui Sound Generator</div>
+          </div>
+          <span class="tool-arrow">→</span>
+        </a>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- player bar -->
+<div class="player-bar" id="playerBar">
+  <div class="progress-wrap" id="progWrap">
+    <div class="progress-bar" id="progBar"></div>
+  </div>
+  <div class="player-bar-inner">
+    <div class="bar-info">
+      <div class="bar-title" id="barTitle">—</div>
+      <div class="bar-artist" id="barArtist">—</div>
+    </div>
+    <button class="bar-play" id="barPlay">▶</button>
+    <span class="bar-time" id="barTime">0:00 / 0:00</span>
+  </div>
+</div>
+
+<audio id="audioEl" preload="metadata"></audio>
+
+<script>
+  const audio = document.getElementById('audioEl');
+  const playerBar = document.getElementById('playerBar');
+  const barPlay = document.getElementById('barPlay');
+  const progBar = document.getElementById('progBar');
+  const progWrap = document.getElementById('progWrap');
+  const barTime = document.getElementById('barTime');
+  const barTitle = document.getElementById('barTitle');
+  const barArtist = document.getElementById('barArtist');
+  let currentTrackEl = null;
+
+  function fmt(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2,'0')}`;
+  }
+
+  // 認証チェック
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
+  async function checkAccess() {
+    if (!token) { showGate(); return; }
+    try {
+      const res = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showContent();
+        window.history.replaceState({}, '', '/members');
+      } else {
+        showGate();
+      }
+    } catch(e) {
+      showGate();
+    }
+  }
+
+  function showGate() {
+    document.getElementById('gate').style.display = 'block';
+    document.getElementById('content').classList.remove('unlocked');
+  }
+
+  async function showContent() {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('content').classList.add('unlocked');
+    loadTracks();
+  }
+
+  async function loadTracks() {
+    try {
+      const res = await fetch('/members/tracks.json');
+      const tracks = await res.json();
+      const list = document.getElementById('trackList');
+      list.innerHTML = '';
+      tracks.forEach(track => {
+        const el = document.createElement('div');
+        el.className = 'track-item';
+        el.innerHTML = `
+          <div class="track-play">▶</div>
+          <div class="track-meta">
+            <div class="track-title">${track.title}</div>
+            <div class="track-artist">${track.artist}</div>
+          </div>
+        `;
+        el.addEventListener('click', () => playTrack(track, el));
+        list.appendChild(el);
+      });
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  function playTrack(track, el) {
+    if (currentTrackEl) currentTrackEl.classList.remove('playing');
+    currentTrackEl = el;
+    el.classList.add('playing');
+    audio.src = track.file;
+    audio.play();
+    barPlay.textContent = '⏸';
+    barTitle.textContent = track.title;
+    barArtist.textContent = track.artist;
+    playerBar.classList.add('active');
+    el.querySelector('.track-play').textContent = '⏸';
+  }
+
+  barPlay.addEventListener('click', () => {
+    if (audio.paused) {
+      audio.play();
+      barPlay.textContent = '⏸';
+      if (currentTrackEl) currentTrackEl.querySelector('.track-play').textContent = '⏸';
+    } else {
+      audio.pause();
+      barPlay.textContent = '▶';
+      if (currentTrackEl) currentTrackEl.querySelector('.track-play').textContent = '▶';
+    }
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    const pct = (audio.currentTime / audio.duration) * 100;
+    progBar.style.width = pct + '%';
+    barTime.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+  });
+
+  audio.addEventListener('ended', () => {
+    barPlay.textContent = '▶';
+    if (currentTrackEl) {
+      currentTrackEl.classList.remove('playing');
+      currentTrackEl.querySelector('.track-play').textContent = '▶';
+    }
+    progBar.style.width = '0%';
+  });
+
+  progWrap.addEventListener('click', (e) => {
+    const rect = progWrap.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  });
+
+  checkAccess();
+</script>
+</body>
+</html>

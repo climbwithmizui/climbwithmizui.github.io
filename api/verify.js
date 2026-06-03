@@ -1,4 +1,3 @@
-import Stripe from 'stripe';
 import { Redis } from '@upstash/redis';
 
 const redis = Redis.fromEnv();
@@ -8,39 +7,34 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const Stripe = require('stripe');
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
   try {
-    const { sessionId, trackId } = req.body;
+    const { token } = req.body;
 
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    // Stripeセッション確認
+    const session = await stripe.checkout.sessions.retrieve(token);
 
     if (session.payment_status !== 'paid') {
       return res.status(403).json({ error: 'Payment not completed' });
     }
 
-    if (session.metadata.trackId !== trackId) {
-      return res.status(403).json({ error: 'Track mismatch' });
+    // トークンの使い回し防止（IPベース）
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const tokenKey = `token_${token}`;
+    const storedIp = await redis.get(tokenKey);
+
+    if (storedIp && storedIp !== ip) {
+      return res.status(403).json({ error: 'Token used from different device' });
     }
 
-    const usedKey = `used_${sessionId}`;
-    const alreadyUsed = await redis.get(usedKey);
-    if (alreadyUsed) {
-      return res.status(403).json({ error: 'Token already used' });
+    if (!storedIp) {
+      // 初回アクセス：IPを記録（30日有効）
+      await redis.set(tokenKey, ip, { ex: 60 * 60 * 24 * 30 });
     }
 
-    await redis.set(usedKey, '1', { ex: 86400 });
-
-    const tracks = {
-      kokoro_hashire: process.env.AUDIO_URL_KOKORO,
-    };
-
-    const audioUrl = tracks[trackId];
-    if (!audioUrl) {
-      return res.status(404).json({ error: 'Track not found' });
-    }
-
-    res.status(200).json({ audioUrl });
+    res.status(200).json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
