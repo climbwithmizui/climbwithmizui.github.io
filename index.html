@@ -522,6 +522,43 @@
     <div class="divider fade-in"></div>
 
     <!-- music player -->
+    <section class="player-section fade-in">
+      <p class="section-label">Preview · 10sec Free</p>
+      <div class="player-card">
+        <div class="track-info">
+          <div class="track-icon" id="trackIcon"></div>
+          <div class="track-meta">
+            <div class="track-title">心よ、走れ (Live Ver.)</div>
+            <div class="track-artist">ASH · CLIMB with Mizui</div>
+          </div>
+          <div class="track-badge" id="trackBadge">FREE 10s</div>
+        </div>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar" id="progressBar"></div>
+          <div class="preview-limit" id="previewLimit"></div>
+        </div>
+        <div class="controls">
+          <button class="play-btn" id="playBtn">▶</button>
+          <span class="time-display" id="timeDisplay">0:00 / 0:10</span>
+        </div>
+        <div class="unlock-section" id="unlockSection">
+          <div class="unlock-label">— Full track —</div>
+          <button class="unlock-btn" id="unlockBtn" onclick="startCheckout()">🔓 Listen Full · $1</button>
+          <div class="unlock-note">One-time · Stream only · No sharing</div>
+        </div>
+        <div class="full-player" id="fullPlayer" style="display:none">
+          <div class="full-label">✦ Full Access</div>
+          <div class="volume-wrap">
+            <span class="vol-icon">🔈</span>
+            <input type="range" id="volSlider" min="0" max="1" step="0.02" value="0.8">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider fade-in"></div>
+
+    <!-- music player -->
 
     <!-- links -->
     <section class="links-section fade-in">
