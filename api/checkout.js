@@ -7,6 +7,9 @@ export default async function handler(req, res) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
   try {
+    console.log('PRICE_ID:', process.env.STRIPE_PRICE_ID);
+    console.log('SITE_URL:', process.env.NEXT_PUBLIC_SITE_URL);
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
@@ -20,6 +23,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({ url: session.url });
   } catch (err) {
+    console.error('Stripe error:', err.message, err.raw);
     res.status(500).json({ error: err.message });
   }
 }
