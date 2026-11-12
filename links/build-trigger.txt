@@ -1,0 +1,1 @@
+Build trigger to start GitHub Pages deployment after source change (2026-11-12).
